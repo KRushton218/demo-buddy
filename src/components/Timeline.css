@@ -1,0 +1,185 @@
+.timeline {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 20px;
+}
+
+.timeline.empty {
+  min-height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.timeline-empty-state p {
+  color: #999;
+  font-size: 14px;
+}
+
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.timeline-header h3 {
+  font-size: 16px;
+  color: #333;
+  font-weight: 600;
+  margin: 0;
+}
+
+.timeline-info {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.time-current {
+  color: #667eea;
+  font-weight: 600;
+}
+
+.time-separator {
+  color: #999;
+}
+
+.time-duration {
+  color: #666;
+}
+
+.timeline-container {
+  position: relative;
+  padding-top: 30px;
+}
+
+.timeline-ruler {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 20px;
+}
+
+.timeline-marker {
+  position: absolute;
+  transform: translateX(-50%);
+}
+
+.timeline-marker-line {
+  width: 1px;
+  height: 8px;
+  background: #ccc;
+  margin: 0 auto;
+}
+
+.timeline-marker-label {
+  font-size: 10px;
+  color: #999;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+.timeline-track {
+  position: relative;
+  height: 60px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  cursor: pointer;
+  overflow: hidden;
+  border: 2px solid #e9ecef;
+  transition: border-color 0.2s ease;
+}
+
+.timeline-track:hover {
+  border-color: #667eea;
+}
+
+.timeline-clip {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 2px solid rgba(102, 126, 234, 0.4);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin: 0 1px;
+}
+
+.timeline-clip:hover {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.4) 0%, rgba(118, 75, 162, 0.4) 100%);
+  border-color: rgba(102, 126, 234, 0.6);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.timeline-clip.selected {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.6) 0%, rgba(118, 75, 162, 0.6) 100%);
+  border-color: #667eea;
+  border-width: 3px;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2), 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.timeline-clip-name {
+  font-size: 11px;
+  color: #333;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+}
+
+.timeline-clip.selected .timeline-clip-name {
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.timeline-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.4) 0%, rgba(118, 75, 162, 0.4) 100%);
+  pointer-events: none;
+  transition: width 0.05s linear;
+}
+
+.timeline-playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.timeline-playhead-line {
+  width: 2px;
+  height: 100%;
+  background: #667eea;
+  box-shadow: 0 0 4px rgba(102, 126, 234, 0.5);
+}
+
+.timeline-playhead-handle {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 12px;
+  background: #667eea;
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
