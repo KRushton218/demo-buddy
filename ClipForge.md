@@ -1,4 +1,4 @@
-**ClipForge**
+**Demo Buddy**
 
 Build a Desktop Video Editor in 72 Hours
 

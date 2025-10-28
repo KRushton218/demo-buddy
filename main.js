@@ -213,13 +213,13 @@ ipcMain.handle('export:start', async (event, clips, outputPath, quality = 'mediu
 
     // Create a temporary file list for FFmpeg concat
     const tempDir = app.getPath('temp');
-    const listFilePath = path.join(tempDir, `clipforge-export-${Date.now()}.txt`);
+    const listFilePath = path.join(tempDir, `demobuddy-export-${Date.now()}.txt`);
     const tempFiles = [];
 
     // Process each clip: trim and save as temp file
     for (let i = 0; i < sortedClips.length; i++) {
       const clip = sortedClips[i];
-      const tempOutputPath = path.join(tempDir, `clipforge-clip-${Date.now()}-${i}.mp4`);
+      const tempOutputPath = path.join(tempDir, `demobuddy-clip-${Date.now()}-${i}.mp4`);
       tempFiles.push(tempOutputPath);
 
       // Resolve source path (handle both absolute and relative paths)

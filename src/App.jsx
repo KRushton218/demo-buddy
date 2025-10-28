@@ -442,8 +442,8 @@ function App() {
     <div className="app">
       <header className="app-header">
         <div className="header-left">
-          <h1>ClipForge</h1>
-          <p>Video Editor</p>
+          <h1>Demo Buddy</h1>
+          <p>AI-Powered Video Editor</p>
         </div>
         {clips.length > 0 && (
           <button

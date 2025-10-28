@@ -1,5 +1,5 @@
 {
-  "name": "clipforge",
+  "name": "demobuddy",
   "version": "1.0.0",
   "main": "main.js",
   "scripts": {
@@ -11,7 +11,7 @@
   },
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "AI-powered video editing assistant for creating demo videos",
   "devDependencies": {
     "concurrently": "^9.2.1",
     "electron": "^38.4.0",

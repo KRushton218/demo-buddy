@@ -42,6 +42,7 @@ function ExportDialog({ clips, onClose }) {
         setProgress(100);
         setStage('Export complete!');
         setExportedPath(result.outputPath);
+        setIsExporting(false);
       } else {
         setError(result.error || 'Export failed');
         setIsExporting(false);

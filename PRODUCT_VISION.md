@@ -1,4 +1,4 @@
-# ClipForge - Product Vision & Persona
+# Demo Buddy - Product Vision & Persona
 
 **Last Updated**: October 27, 2025
 **Status**: MVP Development (72-hour sprint)
@@ -7,7 +7,7 @@
 
 ## Executive Summary
 
-ClipForge is a **developer-focused desktop video editor** designed for recording and editing technical demos, tutorials, and product walkthroughs. Positioned as the "VSCode of video editors," it prioritizes speed, keyboard shortcuts, and developer-specific features while remaining free and open source.
+Demo Buddy is a **developer-focused desktop video editor** designed for recording and editing technical demos, tutorials, and product walkthroughs. Positioned as the "VSCode of video editors," it prioritizes speed, keyboard shortcuts, and developer-specific features while remaining free and open source.
 
 **Core Value Proposition**: Fast, simple video editing for developers who need to create technical content without the complexity of professional NLE software or the limitations of consumer tools like Loom.
 
