@@ -8,7 +8,13 @@ function VideoUpload({ onVideosAdded, compact = false }) {
     try {
       const files = await window.electronAPI.openFileDialog();
       if (files && files.length > 0) {
-        onVideosAdded(files);
+        // Import each video to project folder
+        const importedVideos = [];
+        for (const file of files) {
+          const importedVideo = await window.electronAPI.projectImportVideo(file.path);
+          importedVideos.push(importedVideo);
+        }
+        onVideosAdded(importedVideos);
       }
     } catch (error) {
       console.error('Error selecting files:', error);
@@ -43,9 +49,13 @@ function VideoUpload({ onVideosAdded, compact = false }) {
         // Extract file paths from dropped files using webUtils
         const filePaths = videoFiles.map((file) => window.electronAPI.getPathForFile(file));
 
-        // Get video data from main process
-        const videoData = await window.electronAPI.getVideoData(filePaths);
-        onVideosAdded(videoData);
+        // Import each video to project folder
+        const importedVideos = [];
+        for (const filePath of filePaths) {
+          const importedVideo = await window.electronAPI.projectImportVideo(filePath);
+          importedVideos.push(importedVideo);
+        }
+        onVideosAdded(importedVideos);
       } catch (error) {
         console.error('Error processing dropped files:', error);
       }

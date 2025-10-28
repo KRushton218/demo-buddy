@@ -106,9 +106,9 @@ function Timeline({ clips = [], selectedClipId, currentTime, duration, onSeek, o
                   width: `${clipWidthPercent}%`
                 }}
                 onClick={(e) => handleClipClick(clip.id, e)}
-                title={`${clip.sourceVideo.name} (${formatTime(clip.sourceStart)} - ${formatTime(clip.sourceEnd)})`}
+                title={`${clip.sourceName} (${formatTime(clip.sourceStart)} - ${formatTime(clip.sourceEnd)})`}
               >
-                <div className="timeline-clip-name">{clip.sourceVideo.name}</div>
+                <div className="timeline-clip-name">{clip.sourceName}</div>
               </div>
             );
           })}

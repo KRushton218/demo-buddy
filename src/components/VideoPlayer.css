@@ -99,8 +99,13 @@
   font-size: 13px;
   color: #666;
   font-weight: 600;
-  min-width: 100px;
+  min-width: 120px;
   flex-shrink: 0;
+  font-family: 'Monaco', 'Courier New', monospace;
+}
+
+.spacer {
+  flex: 1;
 }
 
 .seek-bar {

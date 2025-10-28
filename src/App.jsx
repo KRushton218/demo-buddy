@@ -4,10 +4,13 @@ import VideoList from './components/VideoList';
 import VideoPlayer from './components/VideoPlayer';
 import Timeline from './components/Timeline';
 import Sidebar from './components/Sidebar';
+import ExportDialog from './components/ExportDialog';
 import './App.css';
 
-// Generate unique IDs for clips
+// Generate unique IDs for videos and clips
+let videoIdCounter = 0;
 let clipIdCounter = 0;
+const generateVideoId = () => `video_${++videoIdCounter}`;
 const generateClipId = () => `clip_${++clipIdCounter}`;
 
 function App() {
@@ -19,33 +22,82 @@ function App() {
   const [duration, setDuration] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [projectLoaded, setProjectLoaded] = useState(false);
 
   const handleVideosAdded = (newVideos) => {
-    setVideos((prevVideos) => [...prevVideos, ...newVideos]);
+    // Assign unique IDs to each new video
+    const videosWithIds = newVideos.map(video => ({
+      ...video,
+      id: generateVideoId()
+    }));
+
+    setVideos((prevVideos) => [...prevVideos, ...videosWithIds]);
     // Auto-select first video if none selected
-    if (!selectedVideo && newVideos.length > 0) {
-      setSelectedVideo(newVideos[0]);
+    if (!selectedVideo && videosWithIds.length > 0) {
+      setSelectedVideo(videosWithIds[0]);
     }
   };
 
   const handleRemoveVideo = (index) => {
     const videoToRemove = videos[index];
+
+    // Remove all clips associated with this video
+    setClips(prevClips => {
+      // Filter by both videoId (new) and sourcePath (backwards compatibility)
+      const clipsToKeep = prevClips.filter(c => {
+        // New clips have videoId - use that for matching
+        if (c.videoId) {
+          return c.videoId !== videoToRemove.id;
+        }
+        // Old clips without videoId - match by sourcePath
+        return c.sourcePath !== videoToRemove.path;
+      });
+
+      // Ripple delete: close gaps by adjusting timeline positions
+      // Sort by timeline position first
+      const sorted = [...clipsToKeep].sort((a, b) => a.timelineStart - b.timelineStart);
+
+      // Close gaps by repositioning clips
+      let currentPosition = 0;
+      return sorted.map(clip => {
+        const newClip = {
+          ...clip,
+          timelineStart: currentPosition
+        };
+        currentPosition += clip.duration;
+        return newClip;
+      });
+    });
+
+    // Remove the video from the list
     setVideos((prevVideos) => prevVideos.filter((_, i) => i !== index));
 
     // If removing the selected video, clear selection or select next
     if (selectedVideo === videoToRemove) {
       if (videos.length > 1) {
-        const nextIndex = index === videos.length - 1 ? index - 1 : index;
-        setSelectedVideo(videos[nextIndex === index ? nextIndex + 1 : nextIndex]);
+        const nextIndex = index < videos.length - 1 ? index : index - 1;
+        setSelectedVideo(videos[nextIndex]);
       } else {
         setSelectedVideo(null);
       }
     }
+
+    // Clear selected clip if it belonged to removed video
+    setSelectedClipId(prevId => {
+      const selectedClip = clips.find(c => c.id === prevId);
+      if (selectedClip && selectedClip.videoId === videoToRemove.id) {
+        return null;
+      }
+      return prevId;
+    });
   };
 
   const handleClearAll = () => {
     setVideos([]);
     setSelectedVideo(null);
+    setClips([]);
+    setSelectedClipId(null);
   };
 
   const handleSelectVideo = (video) => {
@@ -59,19 +111,27 @@ function App() {
   const handleDurationChange = (dur) => {
     setDuration(dur);
 
-    // When a video is loaded, create an initial clip for the entire video
-    if (selectedVideo && dur > 0) {
-      const existingClip = clips.find(c => c.sourceVideo.path === selectedVideo.path);
-      if (!existingClip) {
+    // When a video is loaded, create an initial clip ONLY if no clips exist for this video
+    // This prevents overwriting trimmed/edited clips when loading from saved project
+    if (selectedVideo && dur > 0 && projectLoaded) {
+      const existingClipsForVideo = clips.filter(c => {
+        // Check by videoId (new) or sourcePath (backwards compatibility)
+        return c.videoId === selectedVideo.id || c.sourcePath === selectedVideo.path;
+      });
+
+      if (existingClipsForVideo.length === 0) {
+        // No clips exist for this video - create initial clip
         const newClip = {
           id: generateClipId(),
-          sourceVideo: selectedVideo,
+          videoId: selectedVideo.id,
+          sourcePath: selectedVideo.path,
+          sourceName: selectedVideo.name,
           sourceStart: 0,
           sourceEnd: dur,
-          timelineStart: 0,
+          timelineStart: clips.length > 0 ? totalTimelineDuration : 0, // Append to timeline
           duration: dur
         };
-        setClips([newClip]);
+        setClips(prevClips => [...prevClips, newClip]);
         setSelectedClipId(newClip.id);
       }
     }
@@ -102,7 +162,9 @@ function App() {
     // Create two new clips
     const clip1 = {
       id: generateClipId(),
-      sourceVideo: clip.sourceVideo,
+      videoId: clip.videoId,
+      sourcePath: clip.sourcePath,
+      sourceName: clip.sourceName,
       sourceStart: clip.sourceStart,
       sourceEnd: sourceTime,
       timelineStart: clip.timelineStart,
@@ -111,7 +173,9 @@ function App() {
 
     const clip2 = {
       id: generateClipId(),
-      sourceVideo: clip.sourceVideo,
+      videoId: clip.videoId,
+      sourcePath: clip.sourcePath,
+      sourceName: clip.sourceName,
       sourceStart: sourceTime,
       sourceEnd: clip.sourceEnd,
       timelineStart: clip.timelineStart + relativeTime,
@@ -189,6 +253,27 @@ function App() {
     setSelectedClipId(clipId);
   };
 
+  // Glue clips together - close all gaps
+  const handleGlueClips = () => {
+    if (clips.length === 0) return;
+
+    // Sort clips by timeline position
+    const sorted = [...clips].sort((a, b) => a.timelineStart - b.timelineStart);
+
+    // Close gaps by adjusting timelineStart positions
+    let currentPosition = 0;
+    const gluedClips = sorted.map(clip => {
+      const newClip = {
+        ...clip,
+        timelineStart: currentPosition
+      };
+      currentPosition += clip.duration;
+      return newClip;
+    });
+
+    setClips(gluedClips);
+  };
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -214,9 +299,16 @@ function App() {
       }
 
       // Cmd+K or Ctrl+K - split at playhead
-      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+      if (e.key === 'k' && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
         e.preventDefault();
         handleSplitAtPlayhead();
+        return;
+      }
+
+      // Cmd+Shift+G or Ctrl+Shift+G - glue clips (close gaps)
+      if (e.key === 'g' && (e.metaKey || e.ctrlKey) && e.shiftKey) {
+        e.preventDefault();
+        handleGlueClips();
         return;
       }
 
@@ -245,6 +337,99 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [clips, selectedClipId, currentTime]);
 
+  // Load project on startup
+  useEffect(() => {
+    const loadProject = async () => {
+      if (window.electronAPI && window.electronAPI.projectInit) {
+        try {
+          const project = await window.electronAPI.projectInit();
+
+          // Migrate old videos to have IDs if they don't have them
+          let migratedVideos = project.videos || [];
+          if (migratedVideos.length > 0) {
+            migratedVideos = migratedVideos.map(v => {
+              if (!v.id) {
+                // Old video without ID - assign one
+                return { ...v, id: generateVideoId() };
+              }
+              return v;
+            });
+
+            setVideos(migratedVideos);
+            setSelectedVideo(migratedVideos[0]);
+
+            // Initialize video ID counter from loaded videos
+            const maxVideoId = Math.max(...migratedVideos.map(v => {
+              const match = v.id.match(/video_(\d+)/);
+              return match ? parseInt(match[1]) : 0;
+            }));
+            videoIdCounter = maxVideoId;
+          }
+
+          // Migrate old clips to have videoIds if they don't have them
+          let migratedClips = project.clips || [];
+          if (migratedClips.length > 0) {
+            migratedClips = migratedClips.map(c => {
+              if (!c.videoId) {
+                // Old clip without videoId - find matching video by sourcePath
+                const matchingVideo = migratedVideos.find(v => v.path === c.sourcePath);
+                if (matchingVideo) {
+                  return { ...c, videoId: matchingVideo.id };
+                }
+                // No matching video found - keep clip as is (will be orphaned)
+                return c;
+              }
+              return c;
+            });
+
+            setClips(migratedClips);
+            setSelectedClipId(migratedClips[0].id);
+
+            // Initialize clip ID counter from loaded clips
+            const maxClipId = Math.max(...migratedClips.map(c => {
+              const match = c.id.match(/clip_(\d+)/);
+              return match ? parseInt(match[1]) : 0;
+            }));
+            clipIdCounter = maxClipId;
+          }
+
+          setProjectLoaded(true);
+        } catch (error) {
+          console.error('Failed to load project:', error);
+          setProjectLoaded(true);
+        }
+      } else {
+        setProjectLoaded(true);
+      }
+    };
+
+    loadProject();
+  }, []);
+
+  // Auto-save project when clips or videos change
+  useEffect(() => {
+    // Don't save until project is loaded (avoid overwriting on startup)
+    if (!projectLoaded) return;
+
+    // Debounce saves to avoid too many writes
+    const saveTimer = setTimeout(async () => {
+      if (window.electronAPI && window.electronAPI.projectSave) {
+        try {
+          const projectData = {
+            clips,
+            videos,
+          };
+          await window.electronAPI.projectSave(projectData);
+          console.log('Project auto-saved');
+        } catch (error) {
+          console.error('Failed to save project:', error);
+        }
+      }
+    }, 300); // Debounce: wait 300ms after last change
+
+    return () => clearTimeout(saveTimer);
+  }, [clips, videos, projectLoaded]);
+
   // Calculate total timeline duration from clips
   const totalTimelineDuration = clips.reduce((max, clip) => {
     const clipEnd = clip.timelineStart + clip.duration;
@@ -256,8 +441,19 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>ClipForge</h1>
-        <p>Video Editor</p>
+        <div className="header-left">
+          <h1>ClipForge</h1>
+          <p>Video Editor</p>
+        </div>
+        {clips.length > 0 && (
+          <button
+            className="export-button-header"
+            onClick={() => setShowExportDialog(true)}
+            title="Export to MP4"
+          >
+            Export MP4
+          </button>
+        )}
       </header>
 
       <main className="app-main">
@@ -268,6 +464,8 @@ function App() {
             <div className="content-area">
               <VideoPlayer
                 video={selectedVideo}
+                clips={clips}
+                currentTime={currentTime}
                 onTimeUpdate={handleTimeUpdate}
                 onDurationChange={handleDurationChange}
                 onSeek={handleSeek}
@@ -317,6 +515,10 @@ function App() {
                   <span>Delete selected clip</span>
                 </div>
                 <div className="shortcut-item">
+                  <kbd>Cmd+Shift+G</kbd>
+                  <span>Glue clips (close gaps)</span>
+                </div>
+                <div className="shortcut-item">
                   <kbd>←</kbd>
                   <span>Select previous clip</span>
                 </div>
@@ -334,6 +536,13 @@ function App() {
               </button>
             </div>
           </div>
+        )}
+
+        {showExportDialog && (
+          <ExportDialog
+            clips={clips}
+            onClose={() => setShowExportDialog(false)}
+          />
         )}
       </main>
     </div>

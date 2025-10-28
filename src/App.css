@@ -25,17 +25,43 @@ body {
   padding: 20px 40px;
   color: white;
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.app-header h1 {
+.header-left h1 {
   font-size: 32px;
   font-weight: 700;
   margin-bottom: 5px;
 }
 
-.app-header p {
+.header-left p {
   font-size: 14px;
   opacity: 0.9;
+}
+
+.export-button-header {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+}
+
+.export-button-header:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.export-button-header:active {
+  transform: translateY(0);
 }
 
 .app-main {

@@ -1,13 +1,14 @@
 import React, { useRef, useState, useEffect } from 'react';
 import './VideoPlayer.css';
 
-function VideoPlayer({ video, onTimeUpdate, onDurationChange, onSeek }) {
+function VideoPlayer({ video, clips = [], currentTime: timelineTime, onTimeUpdate, onDurationChange, onSeek }) {
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
+  const [activeClip, setActiveClip] = useState(null);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -20,10 +21,17 @@ function VideoPlayer({ video, onTimeUpdate, onDurationChange, onSeek }) {
   // Expose seek and togglePlay functions via callback
   useEffect(() => {
     if (onSeek && videoRef.current) {
-      window.videoPlayerSeek = (time) => {
-        if (videoRef.current) {
-          videoRef.current.currentTime = time;
-          setCurrentTime(time);
+      window.videoPlayerSeek = (timelinePos) => {
+        if (!videoRef.current) return;
+
+        // Find clip at timeline position
+        const clip = findClipAtTime(timelinePos);
+
+        if (clip) {
+          // Convert timeline position to source time
+          const sourceTime = timelineToSourceTime(timelinePos, clip);
+          videoRef.current.currentTime = sourceTime;
+          setCurrentTime(timelinePos);
         }
       };
     }
@@ -36,7 +44,25 @@ function VideoPlayer({ video, onTimeUpdate, onDurationChange, onSeek }) {
       delete window.videoPlayerSeek;
       delete window.videoPlayerTogglePlay;
     };
-  }, [onSeek, isPlaying]);
+  }, [onSeek, isPlaying, clips]);
+
+  // Sync video player when timeline position changes externally (from seeks)
+  useEffect(() => {
+    if (!videoRef.current || clips.length === 0) return;
+
+    const clip = findClipAtTime(timelineTime);
+
+    if (clip) {
+      const expectedSourceTime = timelineToSourceTime(timelineTime, clip);
+      const currentSourceTime = videoRef.current.currentTime;
+
+      // Only update if there's a significant difference (avoid feedback loops)
+      if (Math.abs(currentSourceTime - expectedSourceTime) > 0.1) {
+        videoRef.current.currentTime = expectedSourceTime;
+        setActiveClip(clip); // Update active clip when seeking
+      }
+    }
+  }, [timelineTime, clips]);
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -49,13 +75,68 @@ function VideoPlayer({ video, onTimeUpdate, onDurationChange, onSeek }) {
     }
   };
 
+  // Find which clip contains the given timeline position
+  const findClipAtTime = (time) => {
+    return clips.find(clip => {
+      const clipEnd = clip.timelineStart + clip.duration;
+      return time >= clip.timelineStart && time < clipEnd;
+    });
+  };
+
+  // Convert timeline time to source video time
+  const timelineToSourceTime = (timelinePos, clip) => {
+    if (!clip) return 0;
+    const relativeTime = timelinePos - clip.timelineStart;
+    return clip.sourceStart + relativeTime;
+  };
+
   const handleTimeUpdate = () => {
-    if (videoRef.current) {
-      const time = videoRef.current.currentTime;
-      setCurrentTime(time);
-      if (onTimeUpdate) {
-        onTimeUpdate(time);
+    if (!videoRef.current || clips.length === 0) return;
+
+    const sourceTime = videoRef.current.currentTime;
+
+    // Use active clip, or find initial clip if not set
+    let clip = activeClip;
+    if (!clip) {
+      clip = findClipAtTime(0); // Start with first clip
+      if (clip) {
+        setActiveClip(clip);
+      } else {
+        return; // No clips available
       }
+    }
+
+    // Check if we're still within the current clip's boundaries
+    if (sourceTime < clip.sourceStart || sourceTime >= clip.sourceEnd) {
+      // We've gone outside the current clip
+
+      if (sourceTime >= clip.sourceEnd) {
+        // Reached end of current clip - try to find next clip
+        const nextClip = clips.find(c => c.timelineStart === clip.timelineStart + clip.duration);
+
+        if (nextClip && nextClip.videoId === clip.videoId) {
+          // Next clip is from same source and contiguous - jump to it
+          videoRef.current.currentTime = nextClip.sourceStart;
+          setActiveClip(nextClip);
+        } else {
+          // No contiguous next clip from same source - pause
+          videoRef.current.pause();
+          setIsPlaying(false);
+          // Seek timeline to end of current clip
+          if (onTimeUpdate) {
+            onTimeUpdate(clip.timelineStart + clip.duration);
+          }
+        }
+        return;
+      }
+    }
+
+    // Calculate timeline position from source time and active clip
+    const calculatedTimelinePos = clip.timelineStart + (sourceTime - clip.sourceStart);
+    setCurrentTime(calculatedTimelinePos);
+
+    if (onTimeUpdate) {
+      onTimeUpdate(calculatedTimelinePos);
     }
   };
 
@@ -69,13 +150,6 @@ function VideoPlayer({ video, onTimeUpdate, onDurationChange, onSeek }) {
     }
   };
 
-  const handleSeek = (e) => {
-    const seekTime = parseFloat(e.target.value);
-    if (videoRef.current) {
-      videoRef.current.currentTime = seekTime;
-      setCurrentTime(seekTime);
-    }
-  };
 
   const handleVolumeChange = (e) => {
     const newVolume = parseFloat(e.target.value);
@@ -157,18 +231,10 @@ function VideoPlayer({ video, onTimeUpdate, onDurationChange, onSeek }) {
         </button>
 
         <div className="time-display">
-          {formatTime(currentTime)} / {formatTime(duration)}
+          {formatTime(timelineTime)} / {formatTime(clips.reduce((total, clip) => Math.max(total, clip.timelineStart + clip.duration), 0))}
         </div>
 
-        <input
-          type="range"
-          className="seek-bar"
-          min="0"
-          max={duration || 0}
-          value={currentTime}
-          onChange={handleSeek}
-          title="Seek video"
-        />
+        <div className="spacer"></div>
 
         <button className="volume-button" onClick={toggleMute} title={isMuted ? "Unmute" : "Mute"}>
           {isMuted || volume === 0 ? (
